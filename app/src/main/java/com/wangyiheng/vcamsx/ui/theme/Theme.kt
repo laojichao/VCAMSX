@@ -15,12 +15,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
+/** 暗色主题配色方案 */
 private val DarkColorScheme = darkColorScheme(
     primary = Purple80,
     secondary = PurpleGrey80,
     tertiary = Pink80
 )
 
+/** 亮色主题配色方案 */
 private val LightColorScheme = lightColorScheme(
     primary = Purple40,
     secondary = PurpleGrey40,
@@ -37,6 +39,16 @@ private val LightColorScheme = lightColorScheme(
     */
 )
 
+/**
+ * VCAMSX 应用主题 Composable。
+ *
+ * 根据系统暗色模式和 Android 12+ 动态颜色支持自动选择配色方案，
+ * 并设置状态栏颜色。
+ *
+ * @param darkTheme 是否使用暗色主题，默认跟随系统设置
+ * @param dynamicColor 是否启用 Android 12+ 动态颜色，默认为 true
+ * @param content 主题包裹的 Composable 内容
+ */
 @Composable
 fun VCAMSXTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),

@@ -2,6 +2,7 @@ import android.Manifest
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -22,8 +23,19 @@ import com.wangyiheng.vcamsx.components.LivePlayerDialog
 import com.wangyiheng.vcamsx.components.SettingRow
 import com.wangyiheng.vcamsx.components.VideoPlayerDialog
 import com.wangyiheng.vcamsx.modules.home.controllers.HomeController
+import com.wangyiheng.vcamsx.utils.HLog
 
 
+/**
+ * 首页主界面 Composable 组件。
+ *
+ * 提供以下功能：
+ * - RTMP 直播推流地址输入与保存
+ * - 本地视频文件选择
+ * - 视频预览与直播预览对话框
+ * - 视频开关、直播推流开关、音量开关、编解码方式等设置项
+ * - 软件下载页链接跳转
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen() {
@@ -37,6 +49,9 @@ fun HomeScreen() {
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let {
+            Toast.makeText(context, "Selected video: $it", Toast.LENGTH_SHORT).show()
+            HLog.localeLog(context,"Selected video: $it")
+            Log.d("HomeScreen", "Selected video: $it")
             homeController.copyVideoToAppDir(context,it)
         }
     }
@@ -167,6 +182,9 @@ fun HomeScreen() {
 }
 
 
+/**
+ * 首页界面预览 Composable，用于 Android Studio 设计预览。
+ */
 @Preview
 @Composable
 fun PreviewMessageCard() {

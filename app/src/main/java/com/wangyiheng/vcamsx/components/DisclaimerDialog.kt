@@ -17,6 +17,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import com.wangyiheng.vcamsx.MainActivity
 
+/**
+ * 免责声明对话框 Composable 组件。
+ *
+ * 应用首次启动时弹出免责声明弹窗，用户可选择同意或不同意。
+ * 同意后关闭弹窗继续使用，不同意则关闭应用。
+ */
 @Composable
 fun DisclaimerDialog() {
     var showDialog by remember { mutableStateOf(true) }
@@ -90,6 +96,11 @@ fun DisclaimerDialog() {
     }
 }
 
+/**
+ * 关闭应用，结束所有 Activity。
+ *
+ * @param context 当前 Activity 上下文，需为 [MainActivity] 实例
+ */
 private fun closeApp(context: Context) {
     // 停止相关服务
     // 例如：douyin.stop() 和 cloudPlatform.disableAutoRotate()

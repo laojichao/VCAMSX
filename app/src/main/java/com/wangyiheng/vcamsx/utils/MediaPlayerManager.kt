@@ -4,8 +4,16 @@ import android.util.Log
 import tv.danmaku.ijk.media.player.IjkMediaPlayer
 import java.util.*
 
+/**
+ * IjkMediaPlayer 播放器池管理器。
+ *
+ * 维护一个固定大小的播放器对象池（默认 5 个），通过 [acquirePlayer] 获取播放器，
+ * 使用完毕后自动回收重置，减少频繁创建和销毁播放器的开销。
+ */
 object MediaPlayerManager {
-    private const val MAX_PLAYER_COUNT = 5 // 最大播放器数量
+    /** 播放器池最大容量 */
+    private const val MAX_PLAYER_COUNT = 5
+    /** 播放器对象队列 */
     private val playerQueue = LinkedList<IjkMediaPlayer>()
 
     init {
@@ -19,8 +27,17 @@ object MediaPlayerManager {
         }
     }
 
+    /** 当前正在使用的播放器实例 */
     private var currentPlayingPlayer: IjkMediaPlayer? = null
 
+    /**
+     * 获取一个可用的 IjkMediaPlayer 实例。
+     *
+     * 如果当前有正在使用的播放器，会先释放并回收。优先从池中获取，
+     * 池为空时创建新实例。
+     *
+     * @return 可用的 [IjkMediaPlayer] 实例
+     */
     fun acquirePlayer(): IjkMediaPlayer {
         // 释放之前的播放器对象
         Log.d("dbb",playerQueue.toString())
@@ -38,6 +55,11 @@ object MediaPlayerManager {
         }
     }
 
+    /**
+     * 释放播放器并回收到池中。
+     *
+     * @param player 待释放的播放器实例，为 null 时忽略
+     */
     private fun releasePlayer(player: IjkMediaPlayer?) {
         player?.apply {
             reset()

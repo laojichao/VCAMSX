@@ -5,7 +5,7 @@ import android.net.Uri
 import android.util.Log
 import android.view.Surface
 import android.widget.Toast
-import com.wangyiheng.vcamsx.MainHook.Companion.c2_reader_Surfcae
+import com.wangyiheng.vcamsx.MainHook.Companion.c2_reader_Surface
 import com.wangyiheng.vcamsx.MainHook.Companion.context
 import com.wangyiheng.vcamsx.MainHook.Companion.oriHolder
 import com.wangyiheng.vcamsx.MainHook.Companion.original_c1_preview_SurfaceTexture
@@ -16,20 +16,35 @@ import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 
+/**
+ * 视频播放器管理对象，统一管理 Camera1/Camera2 场景下的视频播放逻辑。
+ *
+ * 支持本地视频播放（MediaPlayer）和 RTMP 直播流播放（IjkMediaPlayer），
+ * 根据用户配置自动选择播放方式，并通过定时任务监控播放状态。
+ */
 object VideoPlayer {
+    /** Camera2 硬件解码器实例 */
     var c2_hw_decode_obj: VideoToFrames? = null
+    /** IjkPlayer 播放器实例（用于 RTMP 直播流） */
     var ijkMediaPlayer: IjkMediaPlayer? = null
+    /** 系统 MediaPlayer 实例（用于本地视频） */
     var mediaPlayer: MediaPlayer? = null
+    /** Camera3 播放器实例 */
     var c3_player: MediaPlayer? = null
+    /** Camera2 Reader Surface 的副本引用 */
     var copyReaderSurface:Surface? = null
+    /** 当前正在使用的播放 Surface */
     var currentRunningSurface:Surface? = null
+    /** 定时任务执行器，用于监控播放状态 */
     private val scheduledExecutor: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor()
     init {
         // 初始化代码...
         startTimerTask()
     }
 
-    // 启动定时任务
+    /**
+     * 启动定时任务，每 10 秒检查播放状态。
+     */
     private fun startTimerTask() {
         scheduledExecutor.scheduleWithFixedDelay({
             // 每五秒执行的代码
@@ -37,18 +52,27 @@ object VideoPlayer {
         }, 10, 10, TimeUnit.SECONDS)
     }
 
-    // 实际执行的任务
+    /**
+     * 定时任务执行体，检查并重启 MediaPlayer。
+     */
     private fun performTask() {
         restartMediaPlayer()
     }
 
+    /**
+     * 检查播放状态，当视频和直播均未启用且 Surface 有效时释放播放器。
+     */
     fun restartMediaPlayer(){
         if(videoStatus?.isVideoEnable == true || videoStatus?.isLiveStreamingEnabled == true) return
         if(currentRunningSurface == null || currentRunningSurface?.isValid == false) return
         releaseMediaPlayer()
     }
 
-    // 公共配置方法
+    /**
+     * 配置 IjkMediaPlayer 的公共监听器。
+     *
+     * @param mediaPlayer 待配置的 IjkMediaPlayer 实例
+     */
     private fun configureMediaPlayer(mediaPlayer: IjkMediaPlayer) {
         mediaPlayer.apply {
             // 公共的错误监听器
@@ -64,7 +88,11 @@ object VideoPlayer {
         }
     }
 
-    // RTMP流播放器初始化
+    /**
+     * 初始化 RTMP 直播流播放器（IjkMediaPlayer）。
+     *
+     * 配置硬件解码、缓冲参数和 RTMP 流地址，准备就绪后自动开始播放。
+     */
     fun initRTMPStreamPlayer() {
         ijkMediaPlayer = IjkMediaPlayer().apply {
             // 硬件解码设置
@@ -106,6 +134,11 @@ object VideoPlayer {
     }
 
 
+    /**
+     * 初始化系统 MediaPlayer 用于本地视频播放。
+     *
+     * @param surface 用于视频渲染的 Surface
+     */
     fun initMediaPlayer(surface:Surface){
         val volume = if (videoStatus?.volume == true) 1F else 0F
         mediaPlayer = MediaPlayer().apply {
@@ -121,6 +154,9 @@ object VideoPlayer {
 
 
 
+    /**
+     * 初始化视频播放状态，从 SharedPreferences 读取配置并按需启动直播播放器。
+     */
     fun initializeTheStateAsWellAsThePlayer(){
         InfoProcesser.initStatus()
 
@@ -132,7 +168,13 @@ object VideoPlayer {
     }
 
 
-    // 将surface传入进行播放
+    /**
+     * 根据当前配置将视频画面渲染到指定 Surface。
+     *
+     * 根据视频/直播开关状态和播放器类型，选择合适的播放方式。
+     *
+     * @param surface 目标渲染 Surface
+     */
     private fun handleMediaPlayer(surface: Surface) {
         try {
             // 数据初始化
@@ -172,12 +214,21 @@ object VideoPlayer {
         }
     }
 
+    /**
+     * 记录播放器错误日志。
+     *
+     * @param message 错误描述
+     * @param e 异常对象
+     */
     private fun logError(message: String, e: Exception) {
         // 实现日志记录逻辑，例如使用Android的Log.e函数
         Log.e("MediaPlayerHandler", "$message: ${e.message}")
     }
 
 
+    /**
+     * 释放 MediaPlayer 资源。
+     */
     fun releaseMediaPlayer(){
         if(mediaPlayer == null)return
         mediaPlayer?.stop()
@@ -185,6 +236,11 @@ object VideoPlayer {
         mediaPlayer = null
     }
 
+    /**
+     * Camera2 场景下的视频播放入口。
+     *
+     * 分别处理带名称的预览 Surface 和 ImageReader Surface 的播放。
+     */
     fun camera2Play() {
         // 带name的surface
         original_preview_Surface?.let { surface ->
@@ -192,11 +248,16 @@ object VideoPlayer {
         }
 
         // name=null的surface
-        c2_reader_Surfcae?.let { surface ->
+        c2_reader_Surface?.let { surface ->
             c2_reader_play(surface)
         }
     }
 
+    /**
+     * Camera1 场景下的视频播放入口。
+     *
+     * 优先使用 SurfaceTexture 创建 Surface，其次使用 SurfaceHolder 的 Surface。
+     */
     fun c1_camera_play() {
         if (original_c1_preview_SurfaceTexture != null) {
             original_preview_Surface = Surface(original_c1_preview_SurfaceTexture)
@@ -212,11 +273,18 @@ object VideoPlayer {
             }
         }
 
-        c2_reader_Surfcae?.let { surface ->
+        c2_reader_Surface?.let { surface ->
             c2_reader_play(surface)
         }
     }
 
+    /**
+     * Camera2 ImageReader Surface 的视频播放处理。
+     *
+     * 使用硬件解码器 [VideoToFrames] 将视频解码后渲染到指定 Surface。
+     *
+     * @param c2_reader_Surfcae Camera2 ImageReader 的目标 Surface
+     */
     fun c2_reader_play(c2_reader_Surfcae:Surface){
         if(c2_reader_Surfcae == copyReaderSurface){
             return

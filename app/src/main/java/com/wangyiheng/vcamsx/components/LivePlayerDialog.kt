@@ -12,6 +12,14 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import com.wangyiheng.vcamsx.modules.home.controllers.HomeController
 
+/**
+ * 直播流播放对话框 Composable 组件。
+ *
+ * 当 [HomeController.isLiveStreamingDisplay] 为 true 且直播 URL 非空时显示，
+ * 使用 SurfaceView 播放 RTMP 直播流。
+ *
+ * @param homeController 首页控制器，提供直播状态和播放控制
+ */
 @Composable
 fun LivePlayerDialog(homeController: HomeController) {
     if (homeController.isLiveStreamingDisplay.value && homeController.liveURL.value.isNotEmpty()) {

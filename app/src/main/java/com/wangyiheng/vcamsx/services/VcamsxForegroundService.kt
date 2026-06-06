@@ -11,10 +11,23 @@ import androidx.core.app.NotificationCompat
 import com.wangyiheng.vcamsx.MainActivity
 import com.wangyiheng.vcamsx.R
 
+/**
+ * 前台服务，用于保持应用在后台运行时的存活状态。
+ *
+ * 通过创建通知渠道和前台通知，确保 Xposed 模块在后台持续工作。
+ * 提供静态 [start] 和 [stop] 方法供外部调用。
+ */
 class VcamsxForegroundService: Service()  {
+    /** 通知 ID */
     private val NOTIFICATION_ID = 1
+    /** 通知渠道 ID */
     private val CHANEL_ID: String = VcamsxForegroundService::class.java.getName() + ".foreground"
 
+    /**
+     * 启动前台服务（实例方法）。
+     *
+     * @param context 用于启动服务的上下文
+     */
     fun start(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             context.startForegroundService(
@@ -28,15 +41,29 @@ class VcamsxForegroundService: Service()  {
         }
     }
 
+    /**
+     * 停止前台服务（实例方法）。
+     *
+     * @param context 用于停止服务的上下文
+     */
     fun stop(context: Context) {
         context.stopService(Intent(context, VcamsxForegroundService::class.java))
     }
 
+    /**
+     * 服务创建时启动前台通知。
+     */
     override fun onCreate() {
         super.onCreate()
         startForeground()
     }
 
+    /**
+     * 绑定服务，本服务不支持绑定，返回 null。
+     *
+     * @param intent 绑定意图
+     * @return 始终返回 null
+     */
     override fun onBind(intent: Intent?): IBinder? {
         return null
     }
@@ -45,6 +72,11 @@ class VcamsxForegroundService: Service()  {
         startForeground(NOTIFICATION_ID, buildNotification())
     }
 
+    /**
+     * 构建前台通知对象。
+     *
+     * @return 配置完成的 [Notification] 实例
+     */
     private fun buildNotification(): Notification {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             createNotificationChannel()
@@ -63,6 +95,9 @@ class VcamsxForegroundService: Service()  {
             .setVibrate(LongArray(0))
             .build()
     }
+    /**
+     * 创建通知渠道（Android O 及以上版本）。
+     */
     @RequiresApi(api = Build.VERSION_CODES.O)
     private fun createNotificationChannel() {
         val manager = (getSystemService(Service.NOTIFICATION_SERVICE) as NotificationManager)
@@ -74,12 +109,20 @@ class VcamsxForegroundService: Service()  {
         manager.createNotificationChannel(channel)
     }
 
+    /**
+     * 服务销毁时停止前台服务。
+     */
     override fun onDestroy() {
         stopForeground(true)
         super.onDestroy()
     }
 
     companion object {
+        /**
+         * 启动前台服务（静态方法）。
+         *
+         * @param context 用于启动服务的上下文
+         */
         fun start(context: Context) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(
@@ -92,6 +135,11 @@ class VcamsxForegroundService: Service()  {
                 context.startService(Intent(context, VcamsxForegroundService::class.java))
             }
         }
+        /**
+         * 停止前台服务（静态方法）。
+         *
+         * @param context 用于停止服务的上下文
+         */
         fun stop(context: Context) {
             context.stopService(Intent(context, VcamsxForegroundService::class.java))
         }

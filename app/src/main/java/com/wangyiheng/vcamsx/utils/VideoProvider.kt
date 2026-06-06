@@ -15,7 +15,15 @@ import java.io.FileNotFoundException
 import java.io.FileOutputStream
 import java.io.IOException
 
+/**
+ * 视频文件内容提供器，为 Xposed Hook 进程提供视频文件访问能力。
+ *
+ * 通过 ContentProvider 机制，使被 Hook 的应用能够通过
+ * "content://com.wangyiheng.vcamsx.videoprovider" URI 访问用户选择的视频文件。
+ * 使用 Koin 注入 [InfoManager] 获取视频文件路径配置。
+ */
 class VideoProvider : ContentProvider(), KoinComponent {
+    /** 信息管理器，用于读取视频文件路径配置 */
     val infoManager by inject<InfoManager>()
 
 //    override fun openFile(uri: Uri, mode: String): ParcelFileDescriptor? {
@@ -45,6 +53,15 @@ class VideoProvider : ContentProvider(), KoinComponent {
 //        return ParcelFileDescriptor.open(vcamsxFile, ParcelFileDescriptor.MODE_READ_ONLY)
 //    }
 
+    /**
+     * 打开视频文件，返回文件描述符。
+     *
+     * 从 [InfoManager] 读取视频 URI，通过 ContentResolver 打开对应文件。
+     *
+     * @param uri 请求的内容 URI
+     * @param mode 文件打开模式（如 "r" 只读）
+     * @return 视频文件的 [ParcelFileDescriptor]，打开失败返回 null
+     */
     override fun openFile(uri: Uri, mode: String): ParcelFileDescriptor? {
         val videoInfo = infoManager.getVideoInfo()
         val url = videoInfo!!.videoUrl
@@ -52,7 +69,7 @@ class VideoProvider : ContentProvider(), KoinComponent {
 
         return try {
             // 直接使用ContentResolver打开固定URI指向的文件的ParcelFileDescriptor
-            context.contentResolver.openFileDescriptor(fixedUri, mode)
+            context!!.contentResolver.openFileDescriptor(fixedUri, mode)
         } catch (e: Exception) { // 捕获所有异常，包括FileNotFoundException
             Log.e("Error", "打开文件失败: ${e.message}")
             null
@@ -60,11 +77,22 @@ class VideoProvider : ContentProvider(), KoinComponent {
     }
 
 
+    /**
+     * 内容提供器初始化。
+     *
+     * @return 始终返回 true
+     */
     override fun onCreate(): Boolean {
         // 初始化内容提供器
         return true
     }
 
+    /**
+     * 从 URL 中提取 provider 路径之后的内容部分。
+     *
+     * @param url 完整的 content URI 字符串
+     * @return 提取的内容字符串，未匹配到前缀时返回空字符串
+     */
     fun extractContent(url: String): String {
         val prefix = "com.wangyiheng.vcamsx.videoprovider/"
         val index = url.indexOf(prefix)
@@ -76,6 +104,16 @@ class VideoProvider : ContentProvider(), KoinComponent {
         }
     }
 
+    /**
+     * 查询视频文件信息，返回包含文件名、大小、修改时间的 Cursor。
+     *
+     * @param uri 请求的内容 URI
+     * @param projection 需要返回的列名数组
+     * @param selection 过滤条件
+     * @param selectionArgs 过滤条件参数
+     * @param sortOrder 排序方式
+     * @return 包含视频文件信息的 [MatrixCursor]
+     */
     override fun query(uri: Uri, projection: Array<String>?, selection: String?, selectionArgs: Array<String>?, sortOrder: String?): Cursor {
         // 创建MatrixCursor
         val cursor = MatrixCursor(arrayOf("_id", "display_name", "size", "date_modified","file"))

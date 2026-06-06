@@ -4,6 +4,14 @@ import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.unit.dp
 
+/**
+ * 自适应流式布局 Composable 组件，子元素超出宽度时自动换行。
+ *
+ * @param modifier 应用于布局的修饰符
+ * @param horizontalGap 子元素之间的水平间距，单位 dp，默认 8
+ * @param verticalGap 行与行之间的垂直间距，单位 dp，默认 8
+ * @param content 子元素内容
+ */
 @Composable
 fun FlowRow(
     modifier: Modifier = Modifier,

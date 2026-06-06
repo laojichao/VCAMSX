@@ -27,27 +27,56 @@ import java.io.File
 import java.io.IOException
 import java.net.URL
 
+/**
+ * 首页 ViewModel 控制器，管理视频播放状态、直播推流及配置持久化。
+ *
+ * 通过 Koin 注入 [ApiService] 和 [InfoManager]，负责：
+ * - 视频选择与播放控制
+ * - RTMP 直播流播放
+ * - 播放状态的保存与恢复
+ * - 编解码器能力检测
+ */
 class HomeController: ViewModel(),KoinComponent {
+    /** Retrofit API 服务实例 */
     val apiService: ApiService by inject()
+    /** 应用上下文 */
     val context by inject<Context>()
+    /** 视频替换功能开关状态 */
     val isVideoEnabled  = mutableStateOf(false)
+    /** 音量开关状态 */
     val isVolumeEnabled = mutableStateOf(false)
+    /** 视频播放器类型（1=MediaPlayer, 2=IjkPlayer） */
     val videoPlayer = mutableStateOf(1)
+    /** 解码方式（false=软解码, true=硬解码） */
     val codecType = mutableStateOf(false)
+    /** 直播推流功能开关状态 */
     val isLiveStreamingEnabled = mutableStateOf(false)
 
+    /** 信息管理器，用于持久化配置 */
     val infoManager by inject<InfoManager>()
+    /** IjkPlayer 播放器实例 */
     var ijkMediaPlayer: IjkMediaPlayer? = null
+    /** 系统 MediaPlayer 实例 */
     var mediaPlayer:MediaPlayer? = null
+    /** 直播预览对话框显示状态 */
     val isLiveStreamingDisplay =  mutableStateOf(false)
+    /** 视频预览对话框显示状态 */
     val isVideoDisplay =  mutableStateOf(false)
-//    rtmp://ns8.indexforce.com/home/mystream
+    /** RTMP 直播推流地址 */
     var liveURL = mutableStateOf("rtmp://ns8.indexforce.com/home/mystream")
 
+    /**
+     * 初始化控制器，恢复保存的状态并上传 IP 地址。
+     */
     fun init(){
         getState()
         saveImage()
     }
+    /**
+     * 获取当前设备的公网 IP 地址。
+     *
+     * @return 公网 IP 地址字符串，获取失败返回 null
+     */
     suspend fun getPublicIpAddress(): String? = withContext(Dispatchers.IO) {
         try {
             URL("https://api.ipify.org").readText()
@@ -57,6 +86,9 @@ class HomeController: ViewModel(),KoinComponent {
     }
 
 
+    /**
+     * 获取公网 IP 并上传至服务端。
+     */
     fun saveImage() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
@@ -69,10 +101,19 @@ class HomeController: ViewModel(),KoinComponent {
             }
         }
     }
+    /**
+     * 将用户选择的视频 URI 保存到本地配置。
+     *
+     * @param context 应用上下文
+     * @param videoUri 用户选择的视频 URI
+     */
     fun copyVideoToAppDir(context: Context,videoUri: Uri) {
         infoManager.removeVideoInfo()
         infoManager.saveVideoInfo(VideoInfo(videoUrl=videoUri.toString()))
     }
+    /**
+     * 将当前 UI 状态持久化保存到 SharedPreferences。
+     */
     fun saveState() {
         infoManager.removeVideoStatus()
         infoManager.saveVideoStatus(
@@ -87,6 +128,9 @@ class HomeController: ViewModel(),KoinComponent {
         )
     }
 
+    /**
+     * 从 SharedPreferences 恢复已保存的播放状态到 UI 状态。
+     */
     fun getState(){
         infoManager.getVideoStatus()?.let {
             isVideoEnabled.value = it.isVideoEnable
@@ -99,6 +143,11 @@ class HomeController: ViewModel(),KoinComponent {
     }
 
 
+    /**
+     * 使用系统 MediaPlayer 在指定 SurfaceHolder 上播放本地视频。
+     *
+     * @param holder 用于视频渲染的 SurfaceHolder
+     */
     fun playVideo(holder: SurfaceHolder) {
         val videoUrl = "content://com.wangyiheng.vcamsx.videoprovider"
         val videoPathUri = Uri.parse(videoUrl)
@@ -128,6 +177,12 @@ class HomeController: ViewModel(),KoinComponent {
     }
 
 
+    /**
+     * 使用 IjkMediaPlayer 在指定 SurfaceHolder 上播放 RTMP 直播流。
+     *
+     * @param holder 用于视频渲染的 SurfaceHolder
+     * @param rtmpUrl RTMP 直播流地址
+     */
     fun playRTMPStream(holder: SurfaceHolder, rtmpUrl: String) {
         ijkMediaPlayer = IjkMediaPlayer().apply {
             try {
@@ -179,6 +234,9 @@ class HomeController: ViewModel(),KoinComponent {
         }
     }
 
+    /**
+     * 释放所有播放器资源（IjkMediaPlayer 和 MediaPlayer）。
+     */
     fun release(){
         ijkMediaPlayer?.stop()
         ijkMediaPlayer?.release()
@@ -188,6 +246,11 @@ class HomeController: ViewModel(),KoinComponent {
         mediaPlayer = null
     }
 
+    /**
+     * 检测当前设备是否支持 H.264 硬件解码。
+     *
+     * @return 支持硬件 H.264 解码返回 true，否则返回 false
+     */
     fun isH264HardwareDecoderSupport(): Boolean {
         val codecList = MediaCodecList(MediaCodecList.ALL_CODECS)
         val codecInfos = codecList.codecInfos
@@ -199,6 +262,14 @@ class HomeController: ViewModel(),KoinComponent {
         return false
     }
 
+    /**
+     * 判断给定的编解码器名称是否为软件编解码器。
+     *
+     * 以 "OMX.google." 开头的为软件编解码器，其他 "OMX." 开头的为硬件编解码器。
+     *
+     * @param codecName 编解码器名称
+     * @return 是软件编解码器返回 true，否则返回 false
+     */
     fun isSoftwareCodec(codecName: String): Boolean {
         return when {
             codecName.startsWith("OMX.google.") -> true

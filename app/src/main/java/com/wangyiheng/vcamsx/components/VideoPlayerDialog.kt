@@ -12,6 +12,14 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import com.wangyiheng.vcamsx.modules.home.controllers.HomeController
 
+/**
+ * 视频预览播放对话框 Composable 组件。
+ *
+ * 当 [HomeController.isVideoDisplay] 为 true 时显示，
+ * 使用 SurfaceView 和 MediaPlayer 播放用户选择的本地视频。
+ *
+ * @param homeController 首页控制器，提供视频播放状态和控制方法
+ */
 @Composable
 fun VideoPlayerDialog(homeController: HomeController) {
     if (homeController.isVideoDisplay.value) {
